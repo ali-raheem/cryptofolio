@@ -1,0 +1,46 @@
+#!/usr/bin/python3
+import urllib.request
+
+from datetime import datetime
+dt = datetime.now()
+print('{:{dfmt} {tfmt}}'.format(dt, dfmt='%Y-%m-%d', tfmt='%H:%M'))
+
+def get_price(coin):
+	req = urllib.request.Request('https://www.coingecko.com/en/widget_component/ticker/'+coin+'/gbp')
+	req.add_header('Referer', 'https://www.coingecko.com')
+	req.add_header('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64; rv:58.0) Gecko/20100101 Firefox/58.0')
+	r = urllib.request.urlopen(req)
+	return float(r.read().decode("utf-8").split("£")[1].split("<")[0].replace(",", ""))
+
+import json
+coins = json.load(open('holdings.json'), strict=False)
+
+total = 0
+portfolio = []
+
+for coin in coins:
+	name, amount = coin
+	price = get_price(name)
+	value = price * amount
+	total += value
+	portfolio.append([name, amount, price, value])
+
+labels = []
+sizes = []
+
+print("{:<15}|{:>10}|{:>10}|{:>10}|{:>10}".format("Coin", "Amount", "Price", "Value", "Percentage"))
+for coin in portfolio:
+	name, amount, price, value = coin
+	print("{:<15}|{:10.2f}|{:10.2f}|{:10.2f}|{:10.2%}".format(name, amount, price, value, value/total))
+	labels.append("{} £{:.2f}".format(name, value))
+	sizes.append(value)
+	
+print("Sum: £{:.2f}".format(total))
+
+import matplotlib.pyplot as plt
+colors = ['orange', 'seagreen', 'yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'firebrick', 'darkcyan']
+patches, texts = plt.pie(sizes, colors=None, shadow=True, startangle=90)
+plt.legend(patches, labels, loc="best")
+plt.axis('equal')
+plt.tight_layout()
+plt.show()
